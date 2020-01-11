@@ -1,0 +1,117 @@
+#!/bin/bash
+breaker(){
+	if [ $? -ne 0 ] 
+	then 
+		echo -e "\e[38;2;255;0;0mFAILED!\e[0m"
+		exit
+	fi
+}
+menu(){
+	echo "Usage : yphp [-c] <ProjectName>"
+	echo " "
+	echo "Options"
+	echo " <default>        	: Create in /opt/lampp/htdocs/ if not specified"
+	echo " -c               	: Create in current path"
+	echo " -h   			: Print this message"
+	echo "--template-update 	: Check update for starter template"
+	echo "--version 		: Check current version"
+	echo "--help			: Print this message"
+	echo "--uninstall		: Uninstall yphp completely"
+	echo " "
+}
+
+aut="\e[38;2;0;255;0mYe Htet Hein\e[0m"
+simple_template_path="/usr/lib/yphp/yphp-templates/template_normal"
+
+echo ""
+echo -e "   Automatic PHP project creator by "$aut"."
+echo -e "   Copyright (c) 2020, All rights reserved."
+echo ""
+
+if [ ! -d "$simple_template_path" ] 
+then
+	echo  "Initializing directories..."
+	[ -d "/usr/lib/yphp" ] && rm -rf "/usr/lib/yphp"
+	git clone "https://github.com/yhhCh405/yphp.git" "/usr/lib/yphp" 2> /dev/null
+	breaker
+fi
+
+template_version=$(cat $simple_template_path/template-version)
+
+echo -e "Version $template_version"
+
+makeproject(){
+	distpath=$1
+	filessource="/usr/lib/yphp/template_normal/*"
+	echo "Creating Project..."
+	[ ! -d $distpath ] && echo "Making Required Directories"; mkdir $distpath
+	breaker
+	cp -r $filessource $distpath
+
+	if [ $? -eq 0 ] 
+	then 
+		subl $distpath
+		echo -e "\e[38;2;0;255;0mDONE!\e[0m" 
+		exit
+	else 
+		echo -e "\e[38;2;255;0;0mFAILED!\e[0m"
+		exit
+	fi
+}
+
+if [[ $# -ge 1 ]]
+then
+	if [ $1 == "-c" ]
+	then
+		#in current
+		makeproject $(pwd)"/$2"
+
+	elif [[ $1 == "--help" || $1 == "-h" ]]
+	then
+		menu
+
+	elif [ $1 == "--template-update" ]
+	then
+		#update template
+		echo "Checking for template updates..."
+		get_new_temp_ver=$(curl "https://raw.githubusercontent.com/yhhCh405/yphp/master/yphp-templates/template_normal/template-version" 2> /dev/null)
+		currentver="$template_version"
+		requiredver="$get_new_temp_ver"
+		if [ $currentver != $requiredver ]; then
+		 	if [ "$(printf '%s\n' "$requiredver" "$currentver" | sort -V | head -n1)" = "$currentver" ]; then 
+		        echo "New version available!"
+		        echo "Downloading..."
+		        rm -rf /usr/lib/yphp
+		        [ $? != 0 ] && git clone "https://github.com/yhhCh405/yphp.git" "/usr/lib/yphp" 2> /dev/null
+				breaker
+
+		 	else
+		        echo "Latest version already installed!"
+		 	fi
+		else 
+			echo "Latest version already installed!"
+		fi
+
+	elif [ $1 == "--version" ]
+	then
+		echo "$template_version"
+
+	elif [ $1 == "--uninstall" ]
+	then
+		echo "Are you sure want to remove this program?[y/n]"
+		read uninstall_confirm
+		if [[ $uninstall_confirm == 'y' || $uninstall_confirm == 'Y' ]]; then
+			rm -rf /usr/bin/yphp
+			rm -rf /usr/lib/yphp
+			echo -e "\e[38;2;0;255;0mDONE!\e[0m" 
+		fi
+	else
+		#in defalut
+		makeproject "/opt/lampp/htdocs/$1"
+	fi
+	
+else
+	menu
+	echo -e "\e[38;2;255;0;0m[ERROR]\e[0m : \e[38;2;255;255;0mPlease Specify Project Name!\e[0m"
+fi
+
